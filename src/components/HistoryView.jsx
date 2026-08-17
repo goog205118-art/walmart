@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteReflection } from '../lib/db';
 import { generateAIResponse } from '../lib/ai';
 import { Calendar, Trash2, Pencil, ChevronDown, ChevronUp, Search, GitCompareArrows, Bot, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import DiffChip from './DiffChip';
 
 function RecordImages({ reflectionId }) {
   const images = useLiveQuery(() => db.images.where({ reflectionId }).toArray(), [reflectionId]);
@@ -47,6 +48,14 @@ export default function HistoryView({ onEdit }) {
 
   if (!reflections) return <div>加载中...</div>;
 
+  // 每条记录在时间轴上的前一条（用于涨跌对比，红涨绿跌）
+  const prevById = useMemo(() => {
+    const sorted = [...reflections].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+    const map = {};
+    for (let i = 1; i < sorted.length; i++) map[sorted[i].id] = sorted[i - 1];
+    return map;
+  }, [reflections]);
+
   const filtered = reflections.filter((r) => {
     if (filters.from && r.date < filters.from) return false;
     if (filters.to && r.date > filters.to) return false;
@@ -77,7 +86,10 @@ export default function HistoryView({ onEdit }) {
   const handleAiSummary = async (record) => {
     setAiLoadingId(record.id);
     try {
-      const prompt = `你是资深跨境电商运营顾问。请对以下单条 GRAI 复盘生成一段式总结（150 字以内），包含：当日数据表现一句话、核心问题一句话、下一步动作一句话。直接输出总结文字。
+      const prompt = `你是资深跨境电商运营诊断顾问。请对以下单条 GRAI 复盘输出：
+1. 一段式诊断总结（120 字以内）：当日数据表现一句话、核心问题一句话。
+2. 行动项（必须输出，1-3 条）：每条带时间节点，格式为「- [ ] （时限：如 3天内 / 本周内）具体动作 — 预期验证指标」。
+直接输出，禁止寒暄与长篇大论。
 ${JSON.stringify({ date: record.date, metrics: record.metrics, goal: record.goal, result: record.result, analysis: record.analysis, insight: record.insight })}`;
       const summary = await generateAIResponse(prompt);
       await db.reflections.update(record.id, { aiSummary: summary });
@@ -160,6 +172,7 @@ ${JSON.stringify({ date: record.date, metrics: record.metrics, goal: record.goal
       <div className="space-y-4">
         {filtered.map((record) => {
           const expanded = expandedId === record.id;
+          const prevRec = prevById[record.id];
           return (
             <div key={record.id} className="card hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start border-b pb-4 mb-4">
@@ -173,8 +186,18 @@ ${JSON.stringify({ date: record.date, metrics: record.metrics, goal: record.goal
                         {record.result?.isCompleted === '是' ? '已完成' : record.result?.isCompleted || '未完成'}
                       </span>
                     </h3>
-                    <p className="text-sm text-gray-500">
-                      曝光 {record.metrics?.impressions || '-'} | 消耗 ${record.metrics?.spend || '-'} | CTR {record.metrics?.ctr || '-'}% | CPC ${record.metrics?.cpc || '-'} | 单量 {record.metrics?.orders || '-'} | ROAS {record.metrics?.roas || '-'}
+                    <p className="text-sm text-gray-500 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                      <span>曝光 {record.metrics?.impressions || '-'}</span><DiffChip curr={record.metrics?.impressions} prev={prevRec?.metrics?.impressions} />
+                      <span className="text-gray-300">|</span>
+                      <span>消耗 ${record.metrics?.spend || '-'}</span><DiffChip curr={record.metrics?.spend} prev={prevRec?.metrics?.spend} />
+                      <span className="text-gray-300">|</span>
+                      <span>CTR {record.metrics?.ctr || '-'}%</span><DiffChip curr={record.metrics?.ctr} prev={prevRec?.metrics?.ctr} />
+                      <span className="text-gray-300">|</span>
+                      <span>CPC ${record.metrics?.cpc || '-'}</span><DiffChip curr={record.metrics?.cpc} prev={prevRec?.metrics?.cpc} />
+                      <span className="text-gray-300">|</span>
+                      <span>单量 {record.metrics?.orders || '-'}</span><DiffChip curr={record.metrics?.orders} prev={prevRec?.metrics?.orders} />
+                      <span className="text-gray-300">|</span>
+                      <span>ROAS {record.metrics?.roas || '-'}</span><DiffChip curr={record.metrics?.roas} prev={prevRec?.metrics?.roas} />
                     </p>
                   </div>
                 </div>

@@ -5,7 +5,8 @@ import { generateAIResponse } from '../lib/ai';
 import { importSeedData } from '../lib/seedData';
 import ReactMarkdown from 'react-markdown';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Sparkles, TrendingUp, AlertCircle, PlusCircle, Bot, DollarSign, MousePointerClick, ShoppingCart, Percent, FileInput } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertCircle, PlusCircle, Bot, DollarSign, ShoppingCart, Percent, FileInput, Activity } from 'lucide-react';
+import DiffChip, { diffText, METRIC_LABELS } from './DiffChip';
 
 const REPORT_KEY = 'graiAiReport';
 
@@ -52,15 +53,24 @@ export default function Dashboard({ onNavigate }) {
         countermeasures: r.insight?.countermeasures
       }));
 
-      const prompt = `你是一个资深的跨境电商营销专家。以下是我最近的GRAI复盘数据（按时间倒序）：
+      // JS 预计算最新一次 vs 上一次的指标 Diff，AI 不做算术只做诊断
+      const latest = reflections[0];
+      const prev = reflections[1];
+      const diffLines = prev
+        ? Object.keys(METRIC_LABELS).map((k) => diffText(k, latest.metrics?.[k], prev.metrics?.[k])).filter(Boolean)
+        : [];
+
+      const prompt = `你是资深跨境电商营销诊断专家（业务诊断大脑，不是总结工具）。以下是我最近的GRAI复盘数据（按时间倒序）：
 ${JSON.stringify(recentData)}
 
-请帮我生成一份深刻的洞察报告：
-1. 用 Markdown 可视化表格对比关键指标的变化趋势（曝光、CTR、CPC、花费、转化量、ROAS）。
-2. 分析我最近采取的动作（如调整竞价倍率、改主图、调CPC）是否有效。
-3. 下架分析：明确指出哪些策略应该停止/下架，哪些应该加持。
-4. 给出明确的下一步改进建议与优化方向。
-输出格式要求清晰、一目了然，多用表格。`;
+${prev ? `【最新复盘（${latest.date}）vs 上一次（${prev.date}）的指标 Diff，已预计算】\n${diffLines.length ? diffLines.join('\n') : '（暂无可对比数值）'}` : ''}
+
+请严格按以下结构生成诊断报告：
+1. **指标趋势对比表**：Markdown 表格对比各期关键指标（曝光、CTR、CPC、花费、转化量、ROAS），对显著恶化/改善的维度在表格后用一句话给出诊断结论。
+2. **差异化诊断**：结合 Diff 数据指出当前最值得警惕的 1-2 个信号，并给出具体排查方向（如：CTR 骤降 → 优先检查广告竞价位置、主图吸引力或 Buybox 状态；曝光下降 → 检查预算消耗与竞价倍率；有点击无转化 → 检查价格力、Listing 内容质量与促销状态）。
+3. **动作有效性分析**：最近采取的动作（如调整竞价倍率、改主图、调CPC）哪些有效应加持、哪些无效应下架停止。
+4. **行动项 To-Do List**：3-5 条，每条必须带时间节点，格式为「- [ ] （时限：如 3天内 / 本周内）具体动作 — 预期验证指标」。
+输出格式要求清晰、一目了然，多用表格，禁止长篇大论。`;
 
       const response = await generateAIResponse(prompt);
       setAiSummary(response);
@@ -99,8 +109,12 @@ ${JSON.stringify(recentData)}
     { label: '近7次平均 CTR', value: avgCtr7.toFixed(2) + '%', icon: <Percent size={20}/>, color: 'text-blue-600 bg-blue-100' },
     { label: '累计花费', value: '$' + totalSpend.toFixed(2), icon: <DollarSign size={20}/>, color: 'text-orange-600 bg-orange-100' },
     { label: '累计转化单量', value: totalOrders + ' 单', icon: <ShoppingCart size={20}/>, color: 'text-purple-600 bg-purple-100' },
-    { label: '平均 ROAS', value: avgRoas ? avgRoas.toFixed(2) : '-', icon: <MousePointerClick size={20}/>, color: 'text-green-600 bg-green-100' }
+    { label: '平均 ROAS', value: avgRoas ? avgRoas.toFixed(2) : '-', icon: <Activity size={20}/>, color: 'text-green-600 bg-green-100' }
   ];
+
+  // 最新一次 vs 上一次 的涨跌对比条
+  const latestRec = reflections[0];
+  const prevRec = reflections[1];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -127,6 +141,24 @@ ${JSON.stringify(recentData)}
               </div>
             ))}
           </div>
+
+          {prevRec && (
+            <div className="card py-4">
+              <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
+                <Activity size={14} className="text-indigo-500"/>
+                最新复盘（{latestRec.date}）vs 上一次（{prevRec.date}）· 红涨绿跌
+              </p>
+              <div className="flex flex-wrap gap-x-8 gap-y-2">
+                {Object.entries(METRIC_LABELS).map(([key, label]) => (
+                  <div key={key} className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-500">{label}</span>
+                    <span className="font-semibold text-gray-800">{latestRec.metrics?.[key] || '-'}</span>
+                    <DiffChip curr={latestRec.metrics?.[key]} prev={prevRec.metrics?.[key]} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="card h-80">
