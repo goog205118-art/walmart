@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, FileText, History, Settings, Bot, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, History, Settings, Bot, PlusCircle } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import GraiForm from './components/GraiForm';
 import HistoryView from './components/HistoryView';
@@ -7,14 +7,25 @@ import SettingsView from './components/SettingsView';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [editingId, setEditingId] = useState(null);
+
+  const handleNavigate = (tab) => {
+    if (tab !== 'new') setEditingId(null);
+    setActiveTab(tab);
+  };
+
+  const handleEdit = (id) => {
+    setEditingId(id);
+    setActiveTab('new');
+  };
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard onNavigate={setActiveTab} />;
-      case 'new': return <GraiForm onNavigate={setActiveTab} />;
-      case 'history': return <HistoryView />;
+      case 'dashboard': return <Dashboard onNavigate={handleNavigate} />;
+      case 'new': return <GraiForm key={editingId || 'new'} onNavigate={handleNavigate} editId={editingId} />;
+      case 'history': return <HistoryView onEdit={handleEdit} />;
       case 'settings': return <SettingsView />;
-      default: return <Dashboard />;
+      default: return <Dashboard onNavigate={handleNavigate} />;
     }
   };
 
@@ -28,12 +39,12 @@ function App() {
             GRAI 复盘系统
           </h1>
         </div>
-        
+
         <nav className="flex-1 px-4 space-y-2 mt-4">
-          <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={20} />} text="大盘与分析" />
-          <NavItem active={activeTab === 'new'} onClick={() => setActiveTab('new')} icon={<PlusCircle size={20} />} text="新建复盘" />
-          <NavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History size={20} />} text="历史归档" />
-          <NavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={20} />} text="AI与系统设置" />
+          <NavItem active={activeTab === 'dashboard'} onClick={() => handleNavigate('dashboard')} icon={<LayoutDashboard size={20} />} text="大盘与分析" />
+          <NavItem active={activeTab === 'new'} onClick={() => handleNavigate('new')} icon={<PlusCircle size={20} />} text={editingId ? '编辑复盘' : '新建复盘'} />
+          <NavItem active={activeTab === 'history'} onClick={() => handleNavigate('history')} icon={<History size={20} />} text="历史归档" />
+          <NavItem active={activeTab === 'settings'} onClick={() => handleNavigate('settings')} icon={<Settings size={20} />} text="AI与系统设置" />
         </nav>
       </div>
 

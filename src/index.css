@@ -19,3 +19,41 @@
     @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100;
   }
 }
+
+/* AI Markdown 报告排版（表格/标题/列表） */
+.prose {
+  @apply text-gray-800 text-sm leading-relaxed;
+}
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  @apply font-bold text-gray-900 mt-4 mb-2;
+}
+.prose h1 { @apply text-xl; }
+.prose h2 { @apply text-lg; }
+.prose h3 { @apply text-base; }
+.prose p { @apply my-2; }
+.prose ul, .prose ol {
+  @apply my-2 pl-5;
+}
+.prose ul { @apply list-disc; }
+.prose ol { @apply list-decimal; }
+.prose li { @apply my-1; }
+.prose table {
+  @apply w-full border-collapse my-4 text-sm;
+}
+.prose th, .prose td {
+  @apply border border-gray-200 px-3 py-2 text-left;
+}
+.prose th {
+  @apply bg-gray-50 font-semibold;
+}
+.prose tr:nth-child(even) td {
+  @apply bg-gray-50/50;
+}
+.prose strong { @apply font-semibold text-gray-900; }
+.prose code {
+  @apply bg-gray-100 px-1.5 py-0.5 rounded text-xs;
+}
+.prose hr { @apply my-4 border-gray-200; }
+.prose blockquote {
+  @apply border-l-4 border-blue-300 pl-3 text-gray-600 my-2;
+}
