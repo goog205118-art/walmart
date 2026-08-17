@@ -4,7 +4,7 @@ import { db } from '../lib/db';
 import { generateAIResponse } from '../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Sparkles, TrendingUp, AlertCircle, ArrowRight } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertCircle, ArrowRight, PlusCircle, Bot } from 'lucide-react';
 
 export default function Dashboard({ onNavigate }) {
   const reflections = useLiveQuery(() => db.reflections.orderBy('date').reverse().toArray());
